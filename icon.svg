@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Bailian Studio">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff9a4d"/>
+      <stop offset="0.55" stop-color="#ff6a2a"/>
+      <stop offset="1" stop-color="#e0431a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.28" cy="0.2" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#bg)"/>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#glow)"/>
+  <path d="M32 12.5c1.05 8.1 4.4 11.45 12.5 12.5-8.1 1.05-11.45 4.4-12.5 12.5-1.05-8.1-4.4-11.45-12.5-12.5 8.1-1.05 11.45-4.4 12.5-12.5Z" fill="#fff"/>
+  <path d="M45.5 38.5c.5 3.86 2.09 5.45 5.95 5.95-3.86.5-5.45 2.09-5.95 5.95-.5-3.86-2.09-5.45-5.95-5.95 3.86-.5 5.45-2.09 5.95-5.95Z" fill="#fff" fill-opacity="0.92"/>
+  <path d="M19.5 41.5c.4 3.1 1.68 4.38 4.78 4.78-3.1.4-4.38 1.68-4.78 4.78-.4-3.1-1.68-4.38-4.78-4.78 3.1-.4 4.38-1.68 4.78-4.78Z" fill="#fff" fill-opacity="0.72"/>
+</svg>

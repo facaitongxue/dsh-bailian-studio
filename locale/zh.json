@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "百炼创作台",
+    "description": "在右侧栏通过本机 bailian CLI（bl）生成图片与视频，不直接调用 REST API。"
+  }
+}

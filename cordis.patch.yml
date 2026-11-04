@@ -1,0 +1,12 @@
+# dsh-bailian-studio bundle patch：一行 insert 注册宿主插件。
+# 行 id 必须与 index.js 导出的 cordis name 一致（dsh-bailian-studio）。
+- insert:
+    - id: 'dsh-bailian-studio'
+      name: 'dsh-bailian-studio'
+      config:
+        # 留空 = 自动探测本机 bailian CLI 入口（npm 全局目录 / PATH）。
+        blEntry: ''
+        # 留空 = ~/.dsh/bailian-studio/outputs
+        outputDir: ''
+        imageTimeoutSec: 300
+        videoTimeoutSec: 1200

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Bailian Studio",
+    "description": "Generates images and videos from the right Sidebar through the local bailian CLI (bl), without calling the REST API directly."
+  }
+}
