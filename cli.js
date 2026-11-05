@@ -348,14 +348,14 @@ export function resolveOutputDir(configured) {
     return path.join(homedir(), '.dsh', 'bailian-studio', 'outputs');
 }
 
-function makeJobId() {
+export function makeJobId() {
     const d = new Date();
     const pad = (n, w = 2) => String(n).padStart(w, '0');
     const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
     return `${stamp}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-function cleanLog(stdout, stderr) {
+export function cleanLog(stdout, stderr) {
     const merged = [stdout, stderr].filter((part) => part.trim() !== '').join('\n').trim();
     // CLI 会把生成的云端临时链接打出来（带签名）。本地文件已经落盘，链接没有保留价值，
     // 统一抹掉，避免把带签名的 OSS URL 泄进模型上下文/面板历史。
@@ -364,7 +364,7 @@ function cleanLog(stdout, stderr) {
         .replace(/https?:\/\/[^\s"'<>]*\.oss[^\s"'<>]*/g, '[云端临时链接已省略]');
 }
 
-function tail(text, max = 1200) {
+export function tail(text, max = 1200) {
     if (text.length <= max) return text;
     return `…\n${text.slice(text.length - max)}`;
 }
@@ -374,27 +374,14 @@ function failure(code, message, extra = {}) {
 }
 
 /**
- * 生成图片或视频（图片/视频都经 bl CLI，落盘到 outputDir 下的独立任务目录）。
- * @param {{ outputDir?:string, blEntry?:string, imageTimeoutSec?:number, videoTimeoutSec?:number }} options
- * @param {{ kind:'image'|'video', prompt:string, model?:string, size?:string, n?:number, duration?:number,
- *           resolution?:string, ratio?:string, watermark?:boolean, negativePrompt?:string,
- *           image?:string, refImages?:string[], refVideos?:string[], seed?:number }} input
+ * 构造 bl 生成命令（同步/异步共用）。
+ * @param {'image'|'video'} kind
+ * @param {object} input
+ * @param {string} jobDir
+ * @param {object} options
+ * @param {{ async?: boolean }} [flags] - async=true 时视频只提交、不下载
  */
-export async function generateMedia(options, input) {
-    const kind = input?.kind === 'video' ? 'video' : 'image';
-    const prompt = typeof input?.prompt === 'string' ? input.prompt.trim() : '';
-    if (prompt.length === 0) return failure('BAD_PROMPT', '提示词不能为空');
-    if (prompt.length > 3000) return failure('BAD_PROMPT', '提示词过长（上限 3000 字符）');
-
-    const outputRoot = resolveOutputDir(options.outputDir);
-    const jobId = makeJobId();
-    const jobDir = path.join(outputRoot, jobId);
-    try {
-        await mkdir(jobDir, { recursive: true });
-    } catch (error) {
-        return failure('OUTPUT_DIR', `无法创建输出目录：${error?.message ?? error}`);
-    }
-
+export function buildMediaArgs(kind, input, jobDir, options, flags = {}) {
     const watermark = input?.watermark === true;
     const refImages = Array.isArray(input?.refImages)
         ? input.refImages.filter((file) => typeof file === 'string' && file.trim() !== '').map((file) => file.trim())
@@ -405,6 +392,7 @@ export async function generateMedia(options, input) {
     const legacyImage = typeof input?.image === 'string' && input.image.trim() !== '' ? input.image.trim() : '';
     if (kind === 'video' && legacyImage !== '' && refImages.length === 0) refImages.push(legacyImage);
 
+    const prompt = typeof input?.prompt === 'string' ? input.prompt.trim() : '';
     // 面板里用 @图1 / @视频1 指代素材；CLI 的参考标记是 image1 / video1。
     const hasRefs = refImages.length + refVideos.length > 0;
     const finalPrompt = hasRefs
@@ -431,6 +419,7 @@ export async function generateMedia(options, input) {
         if (Number.isInteger(input?.n) && input.n >= 1 && input.n <= 6) args.push('--n', String(input.n));
         args.push('--out-dir', jobDir, '--out-prefix', 'image');
         timeoutMs = (options.imageTimeoutSec ?? 300) * 1000;
+        if (flags.async) args.push('--async', '--output', 'json');
     } else {
         const useRef = refVideos.length > 0 || refImages.length > 1;
         command = useRef ? 'ref' : 'generate';
@@ -454,9 +443,38 @@ export async function generateMedia(options, input) {
         if (Number.isInteger(input?.duration) && (input.duration === -1 || (input.duration >= 2 && input.duration <= 15))) {
             args.push('--duration', String(input.duration));
         }
-        args.push('--download', path.join(jobDir, 'video.mp4'));
+        if (!flags.async) args.push('--download', path.join(jobDir, 'video.mp4'));
         timeoutMs = (options.videoTimeoutSec ?? 1200) * 1000;
+        if (flags.async) args.push('--async', '--output', 'json');
     }
+
+    return { args, command, timeoutMs, finalPrompt, refImages, refVideos };
+}
+
+/**
+ * 生成图片或视频（图片/视频都经 bl CLI，落盘到 outputDir 下的独立任务目录）。
+ * @param {{ outputDir?:string, blEntry?:string, imageTimeoutSec?:number, videoTimeoutSec?:number }} options
+ * @param {{ kind:'image'|'video', prompt:string, model?:string, size?:string, n?:number, duration?:number,
+ *           resolution?:string, ratio?:string, watermark?:boolean, negativePrompt?:string,
+ *           image?:string, refImages?:string[], refVideos?:string[], seed?:number }} input
+ */
+export async function generateMedia(options, input) {
+    const kind = input?.kind === 'video' ? 'video' : 'image';
+    const prompt = typeof input?.prompt === 'string' ? input.prompt.trim() : '';
+    if (prompt.length === 0) return failure('BAD_PROMPT', '提示词不能为空');
+    if (prompt.length > 3000) return failure('BAD_PROMPT', '提示词过长（上限 3000 字符）');
+
+    const outputRoot = resolveOutputDir(options.outputDir);
+    const jobId = makeJobId();
+    const jobDir = path.join(outputRoot, jobId);
+    try {
+        await mkdir(jobDir, { recursive: true });
+    } catch (error) {
+        return failure('OUTPUT_DIR', `无法创建输出目录：${error?.message ?? error}`);
+    }
+
+    const built = buildMediaArgs(kind, input, jobDir, options);
+    const { args, command, timeoutMs } = built;
 
     const result = await runBl(args, { timeoutMs, entry: options.blEntry });
     const log = cleanLog(result.stdout, result.stderr);

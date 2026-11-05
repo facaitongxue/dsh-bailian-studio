@@ -12,7 +12,8 @@
 import { createReadStream, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { API_PREFIX, FENCE_HEADER, describeCliRoute, describeOutputFile, generateMedia, listRecentOutputs, probeCli, resolveOutputDir } from './cli.js';
+import { API_PREFIX, FENCE_HEADER, describeCliRoute, describeOutputFile, listRecentOutputs, probeCli, resolveOutputDir } from './cli.js';
+import { cancelJob, getJob, submitJob } from './jobs.js';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1', '0.0.0.0']);
 const MAX_BODY_BYTES = 64 * 1024;
@@ -422,6 +423,7 @@ export function registerServerApi(ctx, config) {
                         return;
                     }
                     const root = path.resolve(resolveOutputDir(config.outputDir));
+                    if (typeof body?.jobId === 'string' && body.jobId !== '') cancelJob(body.jobId);
                     const uploadsDir = path.join(root, 'uploads');
                     const removed = [];
                     const jobInfo = body?.jobDir ? resolveInsideRoot(config.outputDir, body.jobDir, true) : null;
@@ -445,6 +447,17 @@ export function registerServerApi(ctx, config) {
                     return;
                 }
 
+                if (req.method === 'GET' && subPath === '/job') {
+                    const id = url.searchParams.get('id') || '';
+                    const job = getJob(id);
+                    if (job === null) {
+                        fail(res, 404, 'NOT_FOUND', '任务不存在，或宿主重启后内存任务已丢失');
+                        return;
+                    }
+                    writeJson(res, 200, { ok: true, value: job });
+                    return;
+                }
+
                 if (req.method === 'POST' && subPath === '/generate') {
                     if (req.headers[FENCE_HEADER] !== '1') {
                         fail(res, 403, 'FORBIDDEN', `缺少 fence header（${FENCE_HEADER}: 1）`);
@@ -458,11 +471,11 @@ export function registerServerApi(ctx, config) {
                         return;
                     }
                     try {
-                        const result = await generateMedia(config, body);
+                        const result = await submitJob(config, body);
                         if (result.ok) writeJson(res, 200, result);
-                        else writeJson(res, 502, result);
+                        else writeJson(res, 400, result);
                     } catch (error) {
-                        fail(res, 500, 'GENERATE_FAILED', error?.message ?? String(error));
+                        fail(res, 500, 'SUBMIT_FAILED', error?.message ?? String(error));
                     }
                     return;
                 }

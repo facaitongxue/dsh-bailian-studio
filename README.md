@@ -40,8 +40,13 @@ DSH 插件：在 Web 界面**右侧栏**里生成图片 / 视频，生成动作�
   "Token Plan" is not supported`）：参考视频请点「+ 视频链接」填公网 HTTPS 地址
   （链接会原样交给 `bl`，不上传本地文件）；参考图片走「+ 图片」本地上传，
   Token Plan 下需要普通 API Key 的 Profile。
-- **异步生成**：点生成只把任务登记进「记录」并后台执行，设置页不阻塞、可以继续
-  改参数、连续提交多个任务；每个任务在记录里各自更新状态。
+- **异步生成**：点生成只提交任务、立即返回，设置页不阻塞，可继续改参数、连续提交。
+  - 视频：`bl video ... --async --output json` 拿 `task_id` 就返回；
+  - 图片：没有任务查询命令，后台起一次同步生成，同样立即返回 jobId；
+  - 宿主内置**单独的 worker**，每 **15 秒**查一次任务状态（`bl video task get`），成功后
+    `bl video download` 落盘；
+  - 超时由 worker 按 deadline 判断，不依赖 CLI 的阻塞等待；
+  - 每条记录独立更新，失败时状态列标红、悬停看原因，详情弹窗里有完整错误。
 - **记录**：每条记录固定一行：时间 / 类型 / 状态 / 提示词（窄列、省略）/ 操作。
   操作列点 `⋯` 弹出四个动作：**播放**（视频调本机播放器；图片用面板内大图预览，
   不再依赖新标签弹窗）、**复制视频 / 复制图片**（放入剪贴板；浏览器不支持视频文件
@@ -129,7 +134,8 @@ DSH 插件：在 Web 界面**右侧栏**里生成图片 / 视频，生成动作�
 | GET  | `/api/bailian-studio/health`   | 探活 + 版本 + 登录态 + 输出目录              |
 | GET  | `/api/bailian-studio/recent`   | 输出目录里最近的图片/视频（不含上传素材）             |
 | POST | `/api/bailian-studio/upload`   | 上传参考图片/视频，返回本地路径（需要 fence header） |
-| POST | `/api/bailian-studio/generate` | 触发生成（需要 fence header）             |
+| POST | `/api/bailian-studio/generate` | 提交任务，立即返回 jobId / taskId（需要 fence header） |
+| GET  | `/api/bailian-studio/job?id=…` | 查询任务状态、文件、失败原因 |
 | POST | `/api/bailian-studio/open`     | 用本机默认程序打开图片/视频（需要 fence header）   |
 | POST | `/api/bailian-studio/reveal`   | 在文件管理器中打开/定位输出目录内的文件（需要 fence header） |
 | POST | `/api/bailian-studio/delete`   | 删除记录对应的任务目录或文件（需要 fence header） |
@@ -151,8 +157,10 @@ DSH 插件：在 Web 界面**右侧栏**里生成图片 / 视频，生成动作�
 
 ## 已知边界
 
-- 同一时间一个任务；关掉面板或刷新页面不会取消正在跑的 `bl` 进程。刷新后
-  旧的「生成中」记录会被标成「中断」，结果以输出目录里的文件为准。
+- 任务队列存在宿主内存里：重启 DSH 会丢失进行中的任务状态（云端任务可能仍在跑），
+  面板会把这类记录标成「状态丢失」，输出目录里的文件不受影响。
+- 关掉面板或刷新页面不影响后台任务；客户端每 5 秒问一次本地 `/job`，云端轮询由
+  worker 15 秒一次。
 - 参考素材上限：图片 3 张、视频 2 个，单个 ≤ 30MB。
 - 只有参考视频、完全没有参考图时，`bl video ref` 可能因缺少 `--image` 报错，
   按 CLI 的提示补一张参考图即可。

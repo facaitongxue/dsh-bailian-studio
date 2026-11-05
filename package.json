@@ -1,6 +1,6 @@
 {
   "name": "dsh-bailian-studio",
-  "version": "0.5.2",
+  "version": "0.6.1",
   "description": "百炼创作台：在 DSH 右侧栏通过本机 bailian CLI（bl）生成图片与视频，不走 REST API。",
   "type": "module",
   "main": "./index.js",
@@ -14,6 +14,7 @@
   "files": [
     "index.js",
     "cli.js",
+    "jobs.js",
     "server.js",
     "tool.js",
     "client.js",

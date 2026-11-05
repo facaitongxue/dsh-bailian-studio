@@ -604,6 +604,15 @@ window.__ModuleLoader__.load({
             e('span', null, formatWhen(record.at)),
             e('span', null, record.kind === 'video' ? '视频' : '图片'),
             status === 'done' ? e('span', null, Math.round((record.elapsedMs || 0) / 1000) + ' 秒') : null),
+          record.taskId
+            ? e('div', { className: 'bs-detail-line' },
+                e('b', null, '任务 ID'),
+                e('span', { className: 'bs-path' }, record.taskId),
+                e('button', {
+                  type: 'button', className: 'bs-mini',
+                  onClick: () => { if (copyText(record.taskId)) props.onNotify('已复制任务 ID'); },
+                }, '复制'))
+            : null,
           e('div', { className: 'bs-prompt-box' },
             e('div', { className: 'bs-prompt-head' },
               e('span', null, '提示词'),
@@ -673,7 +682,10 @@ window.__ModuleLoader__.load({
             },
               e('span', { className: 'c-time', title: new Date(record.at).toLocaleString() }, formatWhen(record.at)),
               e('span', { className: 'c-kind' }, record.kind === 'video' ? '视频' : '图片'),
-              e('span', { className: 'c-status' }, e(StatusPill, { status })),
+              e('span', {
+                className: 'c-status',
+                title: status === 'error' ? ((record.error && record.error.message) || '失败') : undefined,
+              }, e(StatusPill, { status })),
               e('span', { className: 'prompt-cell', title: '点击查看完整提示词' }, record.prompt || '—'),
               e('span', { className: 'c-files' },
                 status === 'running'
@@ -701,7 +713,6 @@ window.__ModuleLoader__.load({
       const [resolution, setResolution] = React.useState('1080P');
       const [ratio, setRatio] = React.useState('16:9');
       const [watermark, setWatermark] = React.useState(false);
-      const [pendingCount, setPendingCount] = React.useState(0);
       const [previewFile, setPreviewFile] = React.useState(null);
       const [result, setResult] = React.useState(null);
       const [error, setError] = React.useState(null);
@@ -751,6 +762,58 @@ window.__ModuleLoader__.load({
           return next;
         });
       }, []);
+
+      // 后台任务的轮询：页面每 5 秒问一次宿主的 /job（本地请求，很轻）。
+      const runningRecords = records.filter((record) => record.status === 'running' && record.jobId);
+      const runningSig = runningRecords.map((record) => record.id + ':' + record.jobId).join(',');
+
+      React.useEffect(() => {
+        if (runningRecords.length === 0) return undefined;
+        let cancelled = false;
+        const poll = async () => {
+          for (const record of runningRecords) {
+            if (cancelled) return;
+            try {
+              const job = await api('/job?id=' + encodeURIComponent(record.jobId));
+              if (cancelled) return;
+              if (job.status === 'done') {
+                updateRecord(record.id, {
+                  status: 'done',
+                  files: job.files || [],
+                  elapsedMs: job.elapsedMs || 0,
+                  jobDir: job.jobDir || record.jobDir || '',
+                  command: job.command || record.command || '',
+                  taskId: job.taskId || record.taskId || '',
+                  error: null,
+                });
+                setResult({ kind: job.kind || record.kind, files: job.files || [], elapsedMs: job.elapsedMs || 0 });
+              } else if (job.status === 'error') {
+                const reason = (job.error && job.error.message) || '任务失败';
+                updateRecord(record.id, {
+                  status: 'error',
+                  error: job.error || { code: 'TASK_FAILED', message: reason },
+                  taskId: job.taskId || record.taskId || '',
+                });
+                setNotice('生成失败：' + reason);
+              }
+            } catch (error) {
+              if (cancelled) return;
+              if (error && error.status === 404) {
+                updateRecord(record.id, {
+                  status: 'error',
+                  error: { code: 'LOST', message: '宿主重启后任务状态丢失（输出目录里可能已有文件）' },
+                });
+              }
+            }
+          }
+        };
+        const timer = window.setInterval(poll, 5000);
+        poll();
+        return () => {
+          cancelled = true;
+          window.clearInterval(timer);
+        };
+      }, [runningSig, updateRecord]);
 
       const openLocal = React.useCallback((file) => {
         openLocalPlayer(file).then((res) => {
@@ -929,13 +992,14 @@ window.__ModuleLoader__.load({
           status: 'running',
           elapsedMs: 0,
           files: [],
+          jobId: '',
+          taskId: '',
         };
         setRecords((prev) => {
           const next = [record].concat(prev).slice(0, RECORD_MAX);
           saveRecords(next);
           return next;
         });
-        setPendingCount((value) => value + 1);
         setError(null);
         setResult(null);
 
@@ -954,15 +1018,20 @@ window.__ModuleLoader__.load({
 
         api('/generate', { method: 'POST', body: JSON.stringify(body) }).then((value) => {
           updateRecord(id, {
-            status: 'done',
+            jobId: value.jobId || '',
+            taskId: value.taskId || '',
+            status: value.status === 'error' ? 'error' : 'running',
+            error: value.error || null,
             files: value.files || [],
-            elapsedMs: value.elapsedMs || 0,
             jobDir: value.jobDir || '',
-            kind: value.kind || kind,
             command: value.command || '',
+            kind: value.kind || kind,
           });
-          setResult(value);
-          setNotice('生成完成：' + (value.files || []).length + ' 个文件，可在「记录」里查看');
+          if (value.status === 'error') {
+            setNotice('提交失败：' + ((value.error && value.error.message) || '未知原因'));
+          } else {
+            setNotice('已提交任务：' + (kind === 'video' ? '视频' : '图片') + '后台生成中，状态约 15 秒刷新一次');
+          }
         }).catch((err) => {
           const message = String(err.message || err);
           updateRecord(id, {
@@ -970,9 +1039,7 @@ window.__ModuleLoader__.load({
             error: { code: err.code || '', message, log: err.log || '' },
           });
           setError({ message, code: err.code || '', log: err.log || '' });
-          setNotice('生成失败：' + message);
-        }).finally(() => {
-          setPendingCount((value) => Math.max(0, value - 1));
+          setNotice('提交失败：' + message);
         });
       }, [prompt, view, model, watermark, size, count, duration, resolution, ratio, refImages, refVideos, updateRecord]);
 
@@ -1028,6 +1095,7 @@ window.__ModuleLoader__.load({
       };
 
       const models = view === 'video' ? VIDEO_MODELS : IMAGE_MODELS;
+      const runningCount = records.filter((record) => record.status === 'running').length;
       const disabled = prompt.trim() === '';
       const tokenPlan = /token-plan/i.test(String(status.authMessage || ''));
 
@@ -1047,9 +1115,9 @@ window.__ModuleLoader__.load({
 
         notice ? e('div', { className: 'bs-toast' }, notice) : null,
 
-        pendingCount > 0
+        runningCount > 0
           ? e('div', { className: 'bs-progress' },
-              e('span', null, pendingCount + ' 个任务进行中（可继续编辑并生成）'),
+              e('span', null, runningCount + ' 个任务进行中（可继续编辑并生成）'),
               e('span', { className: 'bs-bar' }))
           : null,
 
