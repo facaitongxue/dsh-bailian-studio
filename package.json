@@ -1,6 +1,6 @@
 {
   "name": "dsh-bailian-studio",
-  "version": "0.9.2",
+  "version": "0.9.5",
   "description": "百炼创作台：视频/图片生成面板，优先走本机 bailian CLI，没有则用服务商 API。",
   "type": "module",
   "main": "./index.js",

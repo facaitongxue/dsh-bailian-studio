@@ -3,7 +3,7 @@
 // 设计（对应面板的异步需求）：
 //   · 提交：视频用 `bl video ... --async --output json` 拿 task_id 后立即返回；
 //     图片没有任务查询命令，改为后台跑一次同步生成，同样立即返回 jobId。
-//   · 轮询：单个 setInterval，每 15 秒查一次所有在跑的视频任务（`bl video task get`）。
+//   · 轮询：单个 setInterval，每 10 秒查一次所有在跑的视频任务（`bl video task get`）。
 //   · 超时：由 worker 按 deadline 判断，不依赖 CLI 的阻塞等待。
 //   · 结果：视频 SUCCEEDED 后 `bl video download` 落盘；失败把 code/message 存进 job.error。
 
@@ -21,7 +21,7 @@ import {
     tail,
 } from './cli.js';
 
-const POLL_MS = 15000;
+const POLL_MS = 10000;
 const jobs = new Map();
 let timer = null;
 

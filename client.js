@@ -550,6 +550,35 @@ window.__ModuleLoader__.load({
     }
 
     /** 用宿主调用本机播放器；宿主没有 /open（未重启）时退回浏览器打开。 */
+    /** 用 DSH 自带 Open In 打开路径；文件路径先打开父目录（该路由只接受目录）。 */
+    async function openInApp(targetPath, isFile) {
+      const target = String(targetPath || '');
+      if (target === '') return false;
+      const dir = isFile ? target.replace(/[\\/][^\\/]+$/, '') : target;
+      const doPost = (dirPath) => fetch('open-in-app/open', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ app: 'explorer', path: dirPath }),
+      }).then((response) => response.ok).catch(() => false);
+      if (!isFile) return doPost(target);
+      if (await doPost(dir)) return true;
+      return doPost(target);
+    }
+
+    /** 打开文件夹/定位文件：优先 Open In，失败回落插件后端的 explorer。 */
+    async function revealPath(targetPath, options = {}) {
+      const target = String(targetPath || '');
+      if (target === '') return { ok: false, message: '空路径' };
+      const isFile = options.isFile === true;
+      if (await openInApp(target, isFile)) return { ok: true };
+      try {
+        const value = await api('/reveal', { method: 'POST', body: JSON.stringify({ path: target }) });
+        return { ok: true, value };
+      } catch (error) {
+        return { ok: false, message: String(error?.message || error) };
+      }
+    }
+
     async function openLocalPlayer(file) {
       try {
         await api('/open', { method: 'POST', body: JSON.stringify({ path: file.path }) });
@@ -718,8 +747,8 @@ window.__ModuleLoader__.load({
                 }, file.kind === 'video' ? '本机播放' : '查看'),
                 e('button', {
                   type: 'button', className: 'bs-mini',
-                  onClick: () => { if (copyText(file.path)) props.onNotify('已复制文件路径'); },
-                }, '复制路径'))))
+                  onClick: () => props.onRevealFile(file),
+                }, '在资源管理器中打开'))))
             : e('div', { className: 'bs-note' }, status === 'running' ? '等待生成…' : '没有文件'),
           record.jobDir ? e('div', { className: 'bs-path', title: record.jobDir }, record.jobDir) : null));
     }
@@ -1102,9 +1131,22 @@ window.__ModuleLoader__.load({
           setNotice('这条记录没有可打开的文件');
           return;
         }
-        api('/reveal', { method: 'POST', body: JSON.stringify({ path: target }) })
-          .then(() => setNotice('已在资源管理器打开（窗口可能在任务栏，没跳前台就点一下任务栏）'))
-          .catch((err) => setNotice('打开文件夹失败：' + String(err.message || err)));
+        const isFile = !record.jobDir;
+        revealPath(target, { isFile }).then((result) => {
+          if (result.ok) setNotice(isFile ? '已在资源管理器中定位文件' : '已在资源管理器中打开');
+          else setNotice('打开失败：' + (result.message || '未知错误'));
+        });
+      }, []);
+
+      const revealFile = React.useCallback((file) => {
+        if (!file || !file.path) {
+          setNotice('这条记录没有文件路径');
+          return;
+        }
+        revealPath(file.path, { isFile: true }).then((result) => {
+          if (result.ok) setNotice('已在资源管理器中定位文件');
+          else setNotice('打开失败：' + (result.message || '未知错误'));
+        });
       }, []);
 
       const removeRecord = React.useCallback((record) => {
@@ -1298,7 +1340,7 @@ window.__ModuleLoader__.load({
           if (value.status === 'error') {
             setNotice('提交失败：' + ((value.error && value.error.message) || '未知原因'));
           } else {
-            setNotice('已提交任务：' + (kind === 'video' ? '视频' : '图片') + '后台生成中，状态约 15 秒刷新一次');
+            setNotice('已提交任务：' + (kind === 'video' ? '视频' : '图片') + '后台生成中，状态约 10 秒刷新一次');
           }
         }).catch((err) => {
           const message = String(err.message || err);
@@ -1641,6 +1683,7 @@ window.__ModuleLoader__.load({
               onClose: () => setDetailId(null),
               onPreview: (file) => { setPreviewFile(file); },
               onOpenLocal: openLocal,
+              onRevealFile: revealFile,
               onNotify: setNotice,
             })
           : null,

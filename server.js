@@ -166,15 +166,14 @@ function spawnDetached(command, args) {
 /** 打开文件夹（文件则选中它）。 */
 function openFolder(info) {
     if (process.platform === 'win32') {
-        // 目录直接传路径（/e,"dir" 在 spawn 下会失败，反而打开「文档」）；
-        // 文件用 /select 选中，引号支持空格路径。
+        // 与 DSH 自带 Open In 一致：文件用 explorer /select 在资源管理器里定位并选中。
+        // （/e,"dir" 在 detached spawn 下会失败，所以目录直接给路径。）
         const target = info.isDir ? info.path : `/select,"${info.path}"`;
         if (!spawnDetached('explorer.exe', [target])) throw new Error('无法启动 explorer.exe');
         return;
     }
     if (process.platform === 'darwin') {
-        const args = info.isDir ? [info.path] : ['-R', info.path];
-        if (!spawnDetached('open', args)) throw new Error('无法启动 open');
+        if (!spawnDetached('open', ['-R', info.path])) throw new Error('无法启动 open');
         return;
     }
     if (!spawnDetached('xdg-open', [info.isDir ? info.path : path.dirname(info.path)])) {
