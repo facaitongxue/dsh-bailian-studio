@@ -250,11 +250,13 @@ export function runBl(args, options = {}) {
             settled = true;
             clearTimeout(timer);
             const preferGbk = process.platform === 'win32' && route.startsWith('cmd ');
+            const stdoutText = decodeChunks(outChunks, preferGbk);
+            const stderrText = decodeChunks(errChunks, preferGbk);
             resolve({
                 code,
                 signal,
-                stdout: clampLog(decodeChunks(outChunks, preferGbk)),
-                stderr: clampLog(decodeChunks(errChunks, preferGbk)),
+                stdout: options.fullOutput ? stdoutText : clampLog(stdoutText),
+                stderr: options.fullOutput ? stderrText : clampLog(stderrText),
                 timedOut,
                 elapsedMs: Date.now() - startedAt,
                 route,
@@ -284,13 +286,15 @@ export function runBl(args, options = {}) {
         }, timeoutMs);
 
         child.stdout?.on('data', (chunk) => {
-            if (outBytes < LOG_LIMIT * 3) {
+            const cap = options.fullOutput ? 64 * 1024 * 1024 : LOG_LIMIT * 3;
+            if (outBytes < cap) {
                 outChunks.push(chunk);
                 outBytes += chunk.length;
             }
         });
         child.stderr?.on('data', (chunk) => {
-            if (errBytes < LOG_LIMIT * 3) {
+            const cap = options.fullOutput ? 64 * 1024 * 1024 : LOG_LIMIT * 3;
+            if (errBytes < cap) {
                 errChunks.push(chunk);
                 errBytes += chunk.length;
             }

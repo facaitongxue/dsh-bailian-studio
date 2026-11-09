@@ -17,8 +17,27 @@ window.__ModuleLoader__.load({
     const TAB_KIND = 'bailian-studio';
     const RECORD_KEY = 'dsh-bailian-studio.records.v1';
     const LEGACY_HISTORY_KEY = 'dsh-bailian-studio.history.v1';
+    const FORM_KEY = 'dsh-bailian-studio.form.v1';
+    const SIDEBAR_KEY = 'dsh-bailian-studio.sidebar.v1';
     const RECORD_MAX = 60;
     const PROMPT_MAX_HEIGHT = 300;
+
+    function loadFormSettings() {
+      try {
+        const value = JSON.parse(window.localStorage.getItem(FORM_KEY));
+        return value && typeof value === 'object' ? value : {};
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function readSidebarVisible() {
+      try {
+        return window.localStorage.getItem(SIDEBAR_KEY) !== '0';
+      } catch (error) {
+        return true;
+      }
+    }
 
     const IMAGE_MODELS = [
       { value: '', label: '跟随 Profile 默认' },
@@ -298,6 +317,64 @@ window.__ModuleLoader__.load({
   background: var(--bs-surface); border: 1px solid var(--bs-border); border-radius: 8px;
   padding: 8px; max-height: 180px; overflow: auto;
 }
+/* ── 白色卡片主题（对齐「声音复刻」） ───────────────────────── */
+[data-dsh-bailian-studio] {
+  --bs-bg: #f6f7fb;
+  --bs-surface: #ffffff;
+  --bs-surface-2: #f3f5fa;
+  --bs-border: rgba(17,24,39,.10);
+  --bs-border-strong: rgba(17,24,39,.18);
+  --bs-muted: #6b7280;
+  --bs-faint: #9aa1ad;
+  --bs-accent: #3b82f6;
+  --bs-accent-2: #8b5cf6;
+  color: #1f2430;
+}
+[data-dsh-bailian-studio] .bs-root { padding: 10px; gap: 10px; background: radial-gradient(900px 380px at 8% -10%, rgba(59,130,246,.07), transparent 62%), radial-gradient(760px 360px at 96% -8%, rgba(139,92,246,.07), transparent 60%), var(--bs-bg); }
+[data-dsh-bailian-studio] .bs-topbar { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fff; border: 1px solid var(--bs-border); border-radius: 12px; }
+[data-dsh-bailian-studio] .bs-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+[data-dsh-bailian-studio] .bs-brand > div { display: flex; flex-direction: column; min-width: 0; }
+[data-dsh-bailian-studio] .bs-brand strong { font-size: 15px; letter-spacing: .2px; }
+[data-dsh-bailian-studio] .bs-brand .bs-muted { font-size: 11px; color: var(--bs-muted); }
+[data-dsh-bailian-studio] .bs-logo { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #3b82f6, #8b5cf6); box-shadow: 0 6px 16px rgba(99,102,241,.28); flex: none; }
+[data-dsh-bailian-studio] .bs-tabs { display: flex; gap: 2px; padding: 4px; background: #fff; border: 1px solid var(--bs-border); border-radius: 12px; justify-content: flex-start; overflow-x: auto; }
+[data-dsh-bailian-studio] .bs-tab { flex: none; width: 96px; appearance: none; border: 0; background: transparent; color: var(--bs-muted); padding: 7px 6px; border-radius: 8px; cursor: pointer; font: inherit; font-size: 12px; text-align: center; }
+[data-dsh-bailian-studio] .bs-tab:hover { background: var(--bs-surface-2); }
+[data-dsh-bailian-studio] .bs-tab.on { background: rgba(59,130,246,.10); color: #2563eb; font-weight: 600; }
+[data-dsh-bailian-studio] .bs-params { display: flex; flex-direction: row; align-items: flex-end; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+[data-dsh-bailian-studio] .bs-params .bs-field { flex: 0 0 auto; gap: 4px; width: 104px; }
+[data-dsh-bailian-studio] .bs-params .bs-field:first-child { width: 200px; }
+[data-dsh-bailian-studio] .bs-params .bs-field:last-child { width: auto; }
+[data-dsh-bailian-studio] .bs-params .bs-select { width: 100%; max-width: 100%; }
+[data-dsh-bailian-studio] .bs-params .bs-check { white-space: nowrap; }
+[data-dsh-bailian-studio] .bs-btn.primary.bs-generate { width: 160px; flex: none; }
+[data-dsh-bailian-studio] .bs-form .bs-select { max-width: 220px; }
+[data-dsh-bailian-studio] .bs-form .bs-input { max-width: 240px; }
+[data-dsh-bailian-studio] .bs-setting-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+[data-dsh-bailian-studio] .bs-provider-list { display: flex; flex-direction: column; gap: 8px; }
+[data-dsh-bailian-studio] .bs-provider-row { display: flex; align-items: center; gap: 8px; border: 1px solid var(--bs-border); border-radius: 10px; padding: 8px 10px; background: #fff; }
+[data-dsh-bailian-studio] .bs-provider-row.active { border-color: #93c5fd; background: rgba(59,130,246,.06); }
+[data-dsh-bailian-studio] .bs-provider-main { min-width: 0; flex: 1; }
+[data-dsh-bailian-studio] .bs-provider-name { font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; }
+[data-dsh-bailian-studio] .bs-provider-meta { font-size: 11px; color: var(--bs-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-dsh-bailian-studio] .bs-provider-actions { display: flex; gap: 5px; flex: none; }
+[data-dsh-bailian-studio] .bs-badge { font-size: 10px; color: #2563eb; background: rgba(59,130,246,.12); border-radius: 999px; padding: 1px 6px; }
+[data-dsh-bailian-studio] .bs-mini.danger { color: #dc2626; border-color: rgba(220,38,38,.35); }
+[data-dsh-bailian-studio] .bs-mode-seg { display: flex; gap: 4px; }
+[data-dsh-bailian-studio] .bs-mode-seg button { width: 84px; flex: none; border: 1px solid var(--bs-border); background: #fff; border-radius: 8px; padding: 6px 0; cursor: pointer; color: var(--bs-muted); font: inherit; font-size: 12px; }
+[data-dsh-bailian-studio] .bs-mode-seg button.on { background: rgba(59,130,246,.1); color: #2563eb; border-color: #93c5fd; font-weight: 600; }
+[data-dsh-bailian-studio] .bs-btn.primary.bs-save-btn { width: 120px; flex: none; }
+[data-dsh-bailian-studio] .bs-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+[data-dsh-bailian-studio] .bs-provider-modal .bs-input { max-width: 100%; }
+
+[data-dsh-bailian-studio] .bs-open-btn, .bs-open-btn {
+[data-dsh-bailian-studio] .bs-form, [data-dsh-bailian-studio] .bs-records, [data-dsh-bailian-studio] .bs-settings { background: #fff; border: 1px solid var(--bs-border); border-radius: 14px; padding: 12px; }
+[data-dsh-bailian-studio] .bs-input, [data-dsh-bailian-studio] .bs-select, [data-dsh-bailian-studio] textarea.bs-prompt { background: #f6f7fb; }
+[data-dsh-bailian-studio] .bs-setting-card { background: #fff; border: 1px solid var(--bs-border); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+[data-dsh-bailian-studio] .bs-setting-title { font-size: 13px; font-weight: 600; }
+[data-dsh-bailian-studio] .bs-model-chips { display: flex; flex-wrap: wrap; gap: 5px; max-height: 150px; overflow: auto; }
+[data-dsh-bailian-studio] .bs-chip { font-size: 10px; color: var(--bs-muted); border: 1px solid var(--bs-border); border-radius: 999px; padding: 2px 7px; background: var(--bs-surface-2); }
+
 [data-dsh-bailian-studio] .bs-open-btn, .bs-open-btn {
   appearance: none; border: 0; background: transparent; color: inherit; cursor: pointer;
   width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
@@ -702,17 +779,115 @@ window.__ModuleLoader__.load({
           })));
     }
 
+    function SettingsView(props) {
+      const view = props.providers;
+      const list = view && Array.isArray(view.providers) ? view.providers : [];
+      return e('div', { className: 'bs-settings' },
+        e('div', { className: 'bs-setting-card' },
+          e('div', { className: 'bs-setting-head' },
+            e('span', { className: 'bs-setting-title' }, '服务商'),
+            e('button', { type: 'button', className: 'bs-btn ghost', onClick: props.onAdd }, '新增服务商')),
+          e('div', { className: 'bs-note' },
+            view
+              ? '当前生效：' + (view.effective === 'api' ? '服务商 API' : '百炼 CLI')
+                + (view.bl && view.bl.entry ? '（' + view.bl.entry + '）' : '（未检测到 bl）')
+              : '读取中…'),
+          list.length === 0
+            ? e('div', { className: 'bs-note' }, '还没有服务商，点「新增服务商」创建。')
+            : e('div', { className: 'bs-provider-list' },
+                list.map((provider) => e('div', {
+                  key: provider.id,
+                  className: 'bs-provider-row' + (provider.id === view.activeId ? ' active' : ''),
+                },
+                  e('div', { className: 'bs-provider-main' },
+                    e('div', { className: 'bs-provider-name' },
+                      provider.name,
+                      provider.id === view.activeId ? e('span', { className: 'bs-badge' }, '使用中') : null),
+                    e('div', { className: 'bs-provider-meta' },
+                      (provider.mode === 'auto' ? '自动' : provider.mode === 'bailian' ? '百炼 CLI' : '服务商 API')
+                      + (provider.apiBaseUrl ? ' · ' + provider.apiBaseUrl : '')
+                      + (provider.hasApiKey ? ' · ' + provider.apiKeyMasked : ''))),
+                  e('div', { className: 'bs-provider-actions' },
+                    e('button', {
+                      type: 'button', className: 'bs-mini',
+                      disabled: provider.id === view.activeId,
+                      onClick: () => props.onUse(provider.id),
+                    }, provider.id === view.activeId ? '使用中' : '使用'),
+                    e('button', { type: 'button', className: 'bs-mini', onClick: () => props.onEdit(provider) }, '编辑'),
+                    e('button', { type: 'button', className: 'bs-mini danger', onClick: () => props.onDelete(provider.id) }, '删除')))))),
+        e('div', { className: 'bs-setting-card' },
+          e('div', { className: 'bs-setting-title' }, '分辨率规则'),
+          e('div', { className: 'bs-note' }, '百炼：720 / 1280；服务商 API：480 / 720 / 1280。切换服务商后视频页的分辨率选项会跟着变。')),
+        e('div', { className: 'bs-setting-card' },
+          e('div', { className: 'bs-setting-title' }, '界面'),
+          e('label', { className: 'bs-check' },
+            e('input', {
+              type: 'checkbox',
+              checked: props.sidebarVisible,
+              onChange: (event) => props.onSidebarToggle(event.target.checked),
+            }),
+            '在左侧边栏显示「百炼创作台」入口'),
+          e('div', { className: 'bs-note' }, '切换后立即注册/移除左侧入口（整页宽度）；右侧栏和会话头部入口不受影响。')));
+    }
+
+    function ProviderEditModal(props) {
+      const draft = props.draft;
+      const setDraft = props.setDraft;
+      const field = (label, key, options = {}) => e('label', { className: 'bs-field' },
+        e('span', { className: 'bs-label' }, label),
+        e('input', {
+          className: 'bs-input',
+          type: options.type || 'text',
+          value: draft[key] || '',
+          placeholder: options.placeholder || '',
+          onChange: (event) => setDraft(Object.assign({}, draft, { [key]: event.target.value })),
+        }));
+      return e('div', { className: 'bs-modal', onClick: props.onClose },
+        e('div', { className: 'bs-modal-card bs-provider-modal', onClick: (event) => event.stopPropagation() },
+          e('div', { className: 'bs-modal-head' },
+            e('span', null, draft.id ? '编辑服务商' : '新增服务商'),
+            e('button', { type: 'button', className: 'bs-iconbtn', onClick: props.onClose, 'aria-label': '关闭' }, '✕')),
+          field('名称', 'name', { placeholder: '例如：百炼官方 / 我的中转' }),
+          e('div', { className: 'bs-field' },
+            e('span', { className: 'bs-label' }, '模式'),
+            e('div', { className: 'bs-mode-seg' },
+              ['auto', 'bailian', 'api'].map((mode) => e('button', {
+                key: mode,
+                type: 'button',
+                className: draft.mode === mode ? 'on' : '',
+                onClick: () => setDraft(Object.assign({}, draft, { mode })),
+              }, mode === 'auto' ? '自动' : mode === 'bailian' ? '百炼' : '服务商')))),
+          field('API Base URL', 'apiBaseUrl', { placeholder: 'https://dashscope.aliyuncs.com' }),
+          field('API Key', 'apiKey', {
+            type: 'password',
+            placeholder: draft.hasApiKey ? '留空不修改（已保存 ' + draft.apiKeyMasked + '）' : 'sk-...',
+          }),
+          e('div', { className: 'bs-row' },
+            field('图片模型', 'imageModel', { placeholder: 'qwen-image-3.0' }),
+            field('视频模型', 'videoModel', { placeholder: 'wan3.0-video' })),
+          e('div', { className: 'bs-modal-actions' },
+            e('button', { type: 'button', className: 'bs-btn primary bs-save-btn', disabled: props.saving, onClick: props.onSave },
+              props.saving ? '保存中…' : '保存'),
+            e('button', { type: 'button', className: 'bs-btn ghost', onClick: props.onClose }, '取消'))));
+    }
+
     function StudioPanel() {
+      const [initialForm] = React.useState(loadFormSettings);
       const [status, setStatus] = React.useState({ loading: true });
-      const [view, setView] = React.useState('image');
+      const [view, setView] = React.useState(initialForm.view === 'image' ? 'image' : 'video');
+      const [lastFormView, setLastFormView] = React.useState(initialForm.view === 'image' ? 'image' : 'video');
       const [prompt, setPrompt] = React.useState('');
-      const [model, setModel] = React.useState('');
-      const [size, setSize] = React.useState('1:1');
-      const [count, setCount] = React.useState(1);
-      const [duration, setDuration] = React.useState(5);
-      const [resolution, setResolution] = React.useState('1080P');
-      const [ratio, setRatio] = React.useState('16:9');
-      const [watermark, setWatermark] = React.useState(false);
+      const [modelChoices, setModelChoices] = React.useState({
+        image: typeof initialForm.models?.image === 'string' ? initialForm.models.image : (typeof initialForm.model === 'string' ? initialForm.model : ''),
+        video: typeof initialForm.models?.video === 'string' ? initialForm.models.video : '',
+      });
+      const [size, setSize] = React.useState(typeof initialForm.size === 'string' ? initialForm.size : '1:1');
+      const [count, setCount] = React.useState(Number.isInteger(initialForm.count) ? initialForm.count : 1);
+      const [duration, setDuration] = React.useState(typeof initialForm.duration === 'number' ? initialForm.duration : 5);
+      const [resolution, setResolution] = React.useState(typeof initialForm.resolution === 'string' ? initialForm.resolution : '1080P');
+      const [ratio, setRatio] = React.useState(typeof initialForm.ratio === 'string' ? initialForm.ratio : '16:9');
+      const [watermark, setWatermark] = React.useState(initialForm.watermark === true);
+      const [sidebarVisible, setSidebarVisibleState] = React.useState(readSidebarVisible);
       const [previewFile, setPreviewFile] = React.useState(null);
       const [result, setResult] = React.useState(null);
       const [error, setError] = React.useState(null);
@@ -726,9 +901,33 @@ window.__ModuleLoader__.load({
       const [linkOpen, setLinkOpen] = React.useState(false);
       const [linkValue, setLinkValue] = React.useState('');
       const [atState, setAtState] = React.useState(null);
+      const [providers, setProviders] = React.useState(null);
+      const [editingProvider, setEditingProvider] = React.useState(null);
+      const [savingProvider, setSavingProvider] = React.useState(false);
+      const [modelCatalog, setModelCatalog] = React.useState({ image: [], video: [] });
       const promptRef = React.useRef(null);
       const imageInputRef = React.useRef(null);
       const videoInputRef = React.useRef(null);
+
+      const modelKind = view === 'video' ? 'video' : 'image';
+      const model = modelChoices[modelKind] || '';
+      const setModel = (value) => setModelChoices((prev) => ({ ...prev, [modelKind]: value }));
+
+      // 记住上一次的表单参数（按图片/视频分别存模型，以及尺寸/时长/比例/水印/最近 tab）。
+      React.useEffect(() => {
+        try {
+          window.localStorage.setItem(FORM_KEY, JSON.stringify({
+            view: lastFormView,
+            models: modelChoices,
+            size,
+            count,
+            duration,
+            resolution,
+            ratio,
+            watermark,
+          }));
+        } catch (error) { /* 忽略 */ }
+      }, [lastFormView, modelChoices, size, count, duration, resolution, ratio, watermark]);
 
       const refreshStatus = React.useCallback(() => {
         setStatus({ loading: true });
@@ -740,6 +939,75 @@ window.__ModuleLoader__.load({
       }, []);
 
       React.useEffect(() => { refreshStatus(); }, [refreshStatus]);
+
+      const loadProviders = React.useCallback(() => {
+        api('/providers').then((value) => setProviders(value)).catch(() => setProviders(null));
+      }, []);
+
+      React.useEffect(() => { loadProviders(); }, [loadProviders]);
+
+      const loadModels = React.useCallback((kind) => {
+        api('/models?kind=' + kind).then((value) => {
+          setModelCatalog((prev) => ({ ...prev, [kind]: Array.isArray(value.models) ? value.models : [] }));
+        }).catch(() => { /* 目录拉不到就退回内置列表 */ });
+      }, []);
+
+      React.useEffect(() => { loadModels('image'); loadModels('video'); }, [loadModels]);
+
+      const openProviderEditor = React.useCallback((provider) => {
+        setEditingProvider(provider
+          ? {
+              id: provider.id,
+              name: provider.name,
+              mode: provider.mode,
+              apiBaseUrl: provider.apiBaseUrl || '',
+              apiKey: '',
+              imageModel: provider.imageModel || '',
+              videoModel: provider.videoModel || '',
+              hasApiKey: provider.hasApiKey,
+              apiKeyMasked: provider.apiKeyMasked,
+            }
+          : {
+              id: '',
+              name: '新服务商',
+              mode: 'auto',
+              apiBaseUrl: '',
+              apiKey: '',
+              imageModel: '',
+              videoModel: '',
+            });
+      }, []);
+
+      const saveProvider = React.useCallback(() => {
+        if (!editingProvider) return;
+        setSavingProvider(true);
+        api('/providers', { method: 'POST', body: JSON.stringify(editingProvider) }).then((value) => {
+          setProviders(value);
+          setEditingProvider(null);
+          setNotice('服务商已保存');
+          loadModels('image');
+          loadModels('video');
+        }).catch((err) => setNotice('保存失败：' + String(err.message || err))).finally(() => setSavingProvider(false));
+      }, [editingProvider, loadModels]);
+
+      const useProviderById = React.useCallback((id) => {
+        api('/providers/use', { method: 'POST', body: JSON.stringify({ id }) })
+          .then((value) => { setProviders(value); setNotice('已切换服务商'); })
+          .catch((err) => setNotice('切换失败：' + String(err.message || err)));
+      }, []);
+
+      const deleteProviderById = React.useCallback((id) => {
+        let confirmed = false;
+        try {
+          confirmed = window.confirm('删除这个服务商？');
+        } catch (error) {
+          confirmed = false;
+        }
+        if (!confirmed) return;
+        api('/providers/delete', { method: 'POST', body: JSON.stringify({ id }) })
+          .then((value) => { setProviders(value); setNotice('已删除服务商'); })
+          .catch((err) => setNotice('删除失败：' + String(err.message || err)));
+      }, []);
 
       React.useEffect(() => {
         if (!notice) return undefined;
@@ -1088,30 +1356,65 @@ window.__ModuleLoader__.load({
 
       const switchView = (next) => {
         setView(next);
-        if (next === 'records') return;
-        setModel('');
+        if (next === 'image' || next === 'video') setLastFormView(next);
+        if (next === 'records' || next === 'settings') return;
         setResult(null);
         setError(null);
       };
 
-      const models = view === 'video' ? VIDEO_MODELS : IMAGE_MODELS;
+      const toggleSidebarEntry = (next) => {
+        setSidebarVisibleState(next);
+        try {
+          window.localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0');
+        } catch (error) { /* 忽略 */ }
+        if (window.__dshBailianStudio && typeof window.__dshBailianStudio.setSidebarVisible === 'function') {
+          window.__dshBailianStudio.setSidebarVisible(next);
+        }
+      };
+
+      const effectiveMode = providers && providers.effective ? providers.effective : 'bailian';
+      const kindKey = view === 'video' ? 'video' : 'image';
+      const fetchedModels = modelCatalog[kindKey] || [];
+      const baseModelList = (view === 'video' ? VIDEO_MODELS : IMAGE_MODELS).map((item) => ({ id: item.value, name: item.label }));
+      const modelOptions = [{ id: '', name: '跟随 Profile 默认' }].concat(
+        (fetchedModels.length > 0 ? fetchedModels : baseModelList).map((item) => ({ id: item.id, name: item.name || item.id })),
+      );
+      if (model !== '' && !modelOptions.some((item) => item.id === model)) {
+        modelOptions.push({ id: model, name: model });
+      }
+      const resolutionChoices = effectiveMode === 'api'
+        ? [{ value: '480P', label: '480' }, { value: '720P', label: '720' }, { value: '1080P', label: '1280' }]
+        : [{ value: '720P', label: '720' }, { value: '1080P', label: '1280' }];
+
+      React.useEffect(() => {
+        if (effectiveMode !== 'api' && resolution === '480P') setResolution('720P');
+      }, [effectiveMode, resolution]);
+
       const runningCount = records.filter((record) => record.status === 'running').length;
       const disabled = prompt.trim() === '';
       const tokenPlan = /token-plan/i.test(String(status.authMessage || ''));
 
       return e('div', { className: 'bs-root', 'data-dsh-bailian-studio': '' },
-        e('div', { className: 'bs-head' },
-          e('span', { className: 'bs-title' }, '百炼创作台'),
+        e('div', { className: 'bs-topbar' },
+          e('div', { className: 'bs-brand' },
+            e('span', { className: 'bs-logo' }, e(SparkleIcon, { size: 16 })),
+            e('div', null,
+              e('strong', null, '百炼创作台'),
+              e('span', { className: 'bs-muted' }, '视频 / 图片生成 · 百炼 CLI'))),
           e(StatusLine, { status, onRefresh: refreshStatus })),
 
         status && !status.loading && status.available === false
           ? e('div', { className: 'bs-note' }, '宿主侧 bl 不可用：' + (statusDetail(status) || '请检查 bailian CLI 是否安装/登录'))
           : null,
 
-        e('div', { className: 'bs-seg three' },
-          e('button', { type: 'button', className: view === 'image' ? 'on' : '', onClick: () => switchView('image') }, '图片'),
-          e('button', { type: 'button', className: view === 'video' ? 'on' : '', onClick: () => switchView('video') }, '视频'),
-          e('button', { type: 'button', className: view === 'records' ? 'on' : '', onClick: () => switchView('records') }, '记录')),
+        e('div', { className: 'bs-tabs' },
+          [['video', '视频生成'], ['image', '图片生成'], ['records', '历史记录'], ['settings', '服务商设置']].map(([id, label]) =>
+            e('button', {
+              key: id,
+              type: 'button',
+              className: 'bs-tab' + (view === id ? ' on' : ''),
+              onClick: () => switchView(id),
+            }, label))),
 
         notice ? e('div', { className: 'bs-toast' }, notice) : null,
 
@@ -1121,7 +1424,17 @@ window.__ModuleLoader__.load({
               e('span', { className: 'bs-bar' }))
           : null,
 
-        view === 'records'
+        view === 'settings'
+          ? e(SettingsView, {
+              providers,
+              sidebarVisible,
+              onSidebarToggle: toggleSidebarEntry,
+              onAdd: () => openProviderEditor(null),
+              onEdit: (provider) => openProviderEditor(provider),
+              onUse: useProviderById,
+              onDelete: deleteProviderById,
+            })
+          : view === 'records'
           ? e(RecordsTable, {
               records,
               onOpen: (record) => setDetailId(record.id),
@@ -1245,12 +1558,12 @@ window.__ModuleLoader__.load({
                   onChange: (event) => { addRefs(event.target.files, 'video'); event.target.value = ''; },
                 })),
 
-              e('div', { className: 'bs-row' },
+              e('div', { className: 'bs-params' },
                 e(Field, { label: '模型' },
                   e('select', {
                     className: 'bs-select', value: model,
                     onChange: (event) => setModel(event.target.value),
-                  }, models.map((item) => e('option', { key: item.value || 'default', value: item.value }, item.label)))),
+                  }, modelOptions.map((item) => e('option', { key: item.id || 'default', value: item.id }, item.name)))),
                 view === 'image'
                   ? e(Field, { label: '尺寸 / 比例' },
                       e('select', {
@@ -1261,21 +1574,14 @@ window.__ModuleLoader__.load({
                       e('select', {
                         className: 'bs-select', value: resolution,
                         onChange: (event) => setResolution(event.target.value),
-                      }, ['1080P', '720P'].map((value) => e('option', { key: value, value }, value))))),
-
-              view === 'image'
-                ? e('div', { className: 'bs-row' },
-                    e(Field, { label: '张数' },
+                      }, resolutionChoices.map((item) => e('option', { key: item.value, value: item.value }, item.label)))),
+                view === 'image'
+                  ? e(Field, { label: '张数' },
                       e('select', {
                         className: 'bs-select', value: count,
                         onChange: (event) => setCount(Number(event.target.value)),
-                      }, [1, 2, 3, 4, 5, 6].map((value) => e('option', { key: value, value }, String(value) + ' 张')))),
-                    e(Field, { label: '水印' },
-                      e('label', { className: 'bs-check' },
-                        e('input', { type: 'checkbox', checked: watermark, onChange: (event) => setWatermark(event.target.checked) }),
-                        '添加百炼水印')))
-                : e('div', { className: 'bs-row three' },
-                    e(Field, { label: '时长' },
+                      }, [1, 2, 3, 4, 5, 6].map((value) => e('option', { key: value, value }, String(value) + ' 张'))))
+                  : e(Field, { label: '时长' },
                       e('select', {
                         className: 'bs-select', value: duration,
                         onChange: (event) => setDuration(Number(event.target.value)),
@@ -1287,17 +1593,24 @@ window.__ModuleLoader__.load({
                         const label = typeof item === 'object' ? item.label : String(item) + ' 秒';
                         return e('option', { key: String(value), value }, label);
                       }))),
-                    e(Field, { label: '画面比例' },
+                view === 'image'
+                  ? e(Field, { label: '水印' },
+                      e('label', { className: 'bs-check' },
+                        e('input', { type: 'checkbox', checked: watermark, onChange: (event) => setWatermark(event.target.checked) }),
+                        '添加百炼水印'))
+                  : e(Field, { label: '画面比例' },
                       e('select', {
                         className: 'bs-select', value: ratio,
                         onChange: (event) => setRatio(event.target.value),
                       }, ['16:9', '9:16', '1:1', '4:3'].map((value) => e('option', { key: value, value }, value)))),
-                    e(Field, { label: '水印' },
+                view === 'image'
+                  ? null
+                  : e(Field, { label: '水印' },
                       e('label', { className: 'bs-check' },
                         e('input', { type: 'checkbox', checked: watermark, onChange: (event) => setWatermark(event.target.checked) }),
                         '添加'))),
 
-              e('button', { type: 'button', className: 'bs-btn primary', disabled, onClick: submit },
+              e('button', { type: 'button', className: 'bs-btn primary bs-generate', disabled, onClick: submit },
                 e(SparkleIcon, { size: 15 }),
                 view === 'image' ? '生成图片' : '生成视频'),
 
@@ -1311,6 +1624,16 @@ window.__ModuleLoader__.load({
                 : null,
 
               result ? e(ResultBlock, { result, onOpenLocal: openLocal }) : null),
+
+        editingProvider
+          ? e(ProviderEditModal, {
+              draft: editingProvider,
+              setDraft: setEditingProvider,
+              saving: savingProvider,
+              onSave: saveProvider,
+              onClose: () => setEditingProvider(null),
+            })
+          : null,
 
         detailId
           ? e(RecordModal, {
@@ -1404,6 +1727,21 @@ window.__ModuleLoader__.load({
       return OpenBailianButton;
     }
 
+    function PanelIcon(props) {
+      const size = props && props.size ? props.size : 16;
+      return e('svg', {
+        width: size,
+        height: size,
+        viewBox: '0 0 24 24',
+        'aria-hidden': true,
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.8,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+      }, e('path', { d: 'M4 12h2l2-5 3 10 3-13 2 8h4' }));
+    }
+
     function installStyles() {
       const element = document.createElement('style');
       element.setAttribute('data-dsh-bailian-studio-styles', '1');
@@ -1454,6 +1792,38 @@ window.__ModuleLoader__.load({
         }, OpenButton)), 'dsh-bailian-studio: 会话头部入口');
       } catch (error) {
         console.warn('[dsh-bailian-studio] 会话头部入口注册失败（仍可从右侧栏 guide 进入）', error);
+      }
+
+      // 左侧边栏入口 + 整页面板：默认开启，可在「服务商设置 → 界面」里关闭。
+      const PANEL_ID = 'dsh-bailian-studio';
+      let sidebarDisposers = null;
+      const setSidebarVisible = (visible) => {
+        if (visible && sidebarDisposers === null) {
+          const disposeList = ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
+            name: 'sidebar.panellist',
+            id: PANEL_ID,
+            order: 22,
+            label: '百炼创作台',
+          }, PanelIcon));
+          const disposeMain = ctx.slots.inject('main', () => ctx.slots.register({
+            name: 'main',
+            key: PANEL_ID,
+          }, StudioPanel));
+          sidebarDisposers = [disposeList, disposeMain];
+        } else if (!visible && sidebarDisposers !== null) {
+          for (const dispose of sidebarDisposers) {
+            try { dispose(); } catch (error) { /* 忽略 */ }
+          }
+          sidebarDisposers = null;
+        }
+      };
+      try {
+        setSidebarVisible(readSidebarVisible());
+      } catch (error) {
+        console.warn('[dsh-bailian-studio] 左侧栏入口注册失败', error);
+      }
+      if (typeof window !== 'undefined') {
+        window.__dshBailianStudio = { setSidebarVisible };
       }
     }
 

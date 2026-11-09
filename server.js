@@ -14,6 +14,8 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { API_PREFIX, FENCE_HEADER, describeCliRoute, describeOutputFile, listRecentOutputs, probeCli, resolveOutputDir } from './cli.js';
 import { cancelJob, getJob, submitJob } from './jobs.js';
+import { activeProvider, deleteProvider, loadSettings, publicProvider, publicSettings, saveProvider, useProvider } from './settings.js';
+import { listModels } from './models.js';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1', '0.0.0.0']);
 const MAX_BODY_BYTES = 64 * 1024;
@@ -262,6 +264,15 @@ function saveUploadedAsset(config, body) {
     return Object.assign(info, { originalName: rawName || fileName });
 }
 
+/** 当前生效服务商：auto 时有 bl 走百炼，否则走 API。 */
+function resolveProvider(settings, config) {
+    const provider = activeProvider(settings);
+    const bl = describeCliRoute(config.blEntry);
+    const mode = provider ? provider.mode : 'auto';
+    const effective = mode === 'auto' ? (bl.entry !== null ? 'bailian' : 'api') : mode;
+    return { provider, bl, effective };
+}
+
 /**
  * 注册 REST 数据面。宿主没有 webServer 服务时这条 fiber 静默 pending，不影响工具。
  * @param {object} ctx - cordis 上下文
@@ -447,6 +458,79 @@ export function registerServerApi(ctx, config) {
                     return;
                 }
 
+                if (req.method === 'GET' && subPath === '/providers') {
+                    try {
+                        const settings = await loadSettings();
+                        const { provider, bl, effective } = resolveProvider(settings, config);
+                        writeJson(res, 200, {
+                            ok: true,
+                            value: {
+                                ...publicSettings(settings),
+                                effective,
+                                bl,
+                                active: provider ? publicProvider(provider) : null,
+                            },
+                        });
+                    } catch (error) {
+                        fail(res, 500, 'PROVIDERS_FAILED', error?.message ?? String(error));
+                    }
+                    return;
+                }
+
+                if (req.method === 'POST' && (subPath === '/providers' || subPath === '/providers/use' || subPath === '/providers/delete')) {
+                    if (req.headers[FENCE_HEADER] !== '1') {
+                        fail(res, 403, 'FORBIDDEN', `缺少 fence header（${FENCE_HEADER}: 1）`);
+                        return;
+                    }
+                    let body;
+                    try {
+                        body = await readJsonBody(req);
+                    } catch (error) {
+                        fail(res, 400, 'BAD_BODY', error?.message ?? String(error));
+                        return;
+                    }
+                    try {
+                        if (subPath === '/providers/use') {
+                            if (typeof body?.id === 'string' && body.id !== '') await useProvider(body.id);
+                        } else if (subPath === '/providers/delete') {
+                            if (typeof body?.id === 'string' && body.id !== '') await deleteProvider(body.id);
+                        } else {
+                            await saveProvider(body ?? {});
+                        }
+                        const settings = await loadSettings();
+                        const { provider, bl, effective } = resolveProvider(settings, config);
+                        writeJson(res, 200, {
+                            ok: true,
+                            value: {
+                                ...publicSettings(settings),
+                                effective,
+                                bl,
+                                active: provider ? publicProvider(provider) : null,
+                            },
+                        });
+                    } catch (error) {
+                        fail(res, 500, 'PROVIDERS_SAVE_FAILED', error?.message ?? String(error));
+                    }
+                    return;
+                }
+
+                if (req.method === 'GET' && subPath === '/models') {
+                    try {
+                        const kind = url.searchParams.get('kind') === 'video' ? 'video' : 'image';
+                        const settings = await loadSettings();
+                        const { provider, effective } = resolveProvider(settings, config);
+                        const result = await listModels(kind, {
+                            mode: effective,
+                            settings: provider ?? {},
+                            blEntry: config.blEntry,
+                        });
+                        writeJson(res, 200, { ok: true, value: { kind, mode: effective, ...result } });
+                    } catch (error) {
+                        fail(res, 500, 'MODELS_FAILED', error?.message ?? String(error));
+                    }
+                    return;
+                }
+
                 if (req.method === 'GET' && subPath === '/job') {
                     const id = url.searchParams.get('id') || '';
                     const job = getJob(id);
@@ -471,7 +555,16 @@ export function registerServerApi(ctx, config) {
                         return;
                     }
                     try {
-                        const result = await submitJob(config, body);
+                        const settings = await loadSettings();
+                        const { provider, effective } = resolveProvider(settings, config);
+                        if (effective === 'api' && (!provider || !provider.apiKey || !provider.apiBaseUrl)) {
+                            fail(res, 400, 'NO_PROVIDER', '当前服务商是 API 模式，但还没填 Base URL 与 API Key');
+                            return;
+                        }
+                        const jobConfig = effective === 'api' && provider
+                            ? { ...config, apiKey: provider.apiKey, apiBaseUrl: provider.apiBaseUrl }
+                            : config;
+                        const result = await submitJob(jobConfig, body);
                         if (result.ok) writeJson(res, 200, result);
                         else writeJson(res, 400, result);
                     } catch (error) {

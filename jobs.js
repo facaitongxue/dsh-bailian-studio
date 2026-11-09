@@ -124,6 +124,7 @@ async function downloadVideo(job) {
     const result = await runBl(['video', 'download', '--task-id', job.taskId, '--out', outPath], {
         timeoutMs: 300000,
         entry: job.blEntry,
+        extraEnv: job.apiEnv,
     });
     if (result.code === 0 && existsSync(outPath)) {
         const info = describeOutputFile(outPath);
@@ -157,6 +158,7 @@ async function tick() {
         const result = await runBl(['video', 'task', 'get', '--task-id', job.taskId, '--output', 'json'], {
             timeoutMs: 60000,
             entry: job.blEntry,
+            extraEnv: job.apiEnv,
         });
         const text = cleanLog(result.stdout, result.stderr);
         if (result.code !== 0) continue; // 网络抖动：保留任务，下一轮再查
@@ -191,6 +193,12 @@ export async function submitJob(options, input) {
     }
 
     const timeoutSec = kind === 'video' ? (options.videoTimeoutSec ?? 1200) : (options.imageTimeoutSec ?? 300);
+    const apiEnv = options.apiKey
+        ? {
+            DASHSCOPE_API_KEY: options.apiKey,
+            ...(options.apiBaseUrl ? { DASHSCOPE_BASE_URL: options.apiBaseUrl } : {}),
+        }
+        : undefined;
     const job = {
         id: jobId,
         kind,
@@ -205,6 +213,7 @@ export async function submitJob(options, input) {
         command: '',
         elapsedMs: 0,
         blEntry: options.blEntry,
+        apiEnv,
     };
     jobs.set(jobId, job);
     ensureWorker();
@@ -212,7 +221,7 @@ export async function submitJob(options, input) {
     if (kind === 'video') {
         const built = buildMediaArgs(kind, input, jobDir, options, { async: true });
         job.command = `video ${built.command}`;
-        const result = await runBl(built.args, { timeoutMs: 180000, entry: options.blEntry });
+        const result = await runBl(built.args, { timeoutMs: 180000, entry: options.blEntry, extraEnv: apiEnv });
         const log = cleanLog(result.stdout, result.stderr);
         job.log = tail(log, 3000);
         if (result.code !== 0) {
@@ -233,7 +242,7 @@ export async function submitJob(options, input) {
     // 图片：后台跑一次同步生成，立刻把 job 交回去。
     const built = buildMediaArgs(kind, input, jobDir, options, { async: false });
     job.command = `image ${built.command}`;
-    runBl(built.args, { timeoutMs: built.timeoutMs, entry: options.blEntry }).then((result) => {
+    runBl(built.args, { timeoutMs: built.timeoutMs, entry: options.blEntry, extraEnv: apiEnv }).then((result) => {
         const log = cleanLog(result.stdout, result.stderr);
         job.log = tail(log, 4000);
         if (result.timedOut) {
